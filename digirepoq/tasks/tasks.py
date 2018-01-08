@@ -1,5 +1,6 @@
 from celery.task import task
 from yaml import load as yaml_load
+from botocore.errorfactory import ClientError
 import boto3
 import logging
 import requests
@@ -11,7 +12,14 @@ app.config_from_object(celeryconfig)
 
 def s3_source_exists(bagname):
     """ Check that source bag exists in S3 """
-    pass
+    s3_bucket='ul-bagit'
+    s3 = boto3.resource('s3')
+    s3_key = "{0}/{1}/{3}".format('source', bag, 'bag-info.txt')
+    try:
+        s3.head_object(Bucket=s3_bucket, Key=s3_key)
+        return True
+    except ClientError:
+        return False
 
 
 def get_mmsid_from_name(bagname):
@@ -39,19 +47,21 @@ def get_mmsid_from_s3(bagname):
     return None
 
 
-def get_collection(mmsid):
+def get_collection(token, mmsid):
     """ guess collection based on alma record details"""
-    # TODO: call api end point to get xml record
-    # https://api-na.hosted.exlibrisgroup.com/almaws/v1/bibs/{mmsID}/holdings 
-    xml = etree.fromstring(bb.strip())
-    # TODO: update to use collection pids in islandora
+    url = "https://api-na.hosted.exlibrisgroup.com/almaws/v1/bibs/{0}/holdings/?apikey={1}"
+    response = requests.get(url.format(mmsid, token))
+    xml = etree.fromstring(response.content.strip())
+    # TODO: Add missing collections' namespace:PID
     collections = {
-        'bizzell_bible': '//holdings/holding/library[text()="BIZZELL"] and //holdings/holding/location[text()="BIZZ_BIBLE"]',
-        'bass_business': '//holdings/holding/library[text()="BIZZELL"] and //holdings/holding/location[text()="BASS_COLL"]',
-        'west_hist': '//holdings/holding/library[text()="WESTRNHIST"]',
-        'hist_sci': '//holdings/holding/library[text()="HISTSCI"]',
+        #'bizzell_bible': '//holdings/holding/library[text()="BIZZELL"] and //holdings/holding/location[text()="BIZZ_BIBLE"]',
+        'oku:bbh': '//holdings/holding/library[text()="BIZZELL"] and //holdings/holding/location[text()="BASS_COLL"]',
+        #'west_hist': '//holdings/holding/library[text()="WESTRNHIST"]',
+        'oku:hos': '//holdings/holding/library[text()="HISTSCI"]',
     }
-    return next((collection for collection, path in collections.items() if xml.xpath(path)))
+    for collection, path in collections.items():
+        if xml.xpath(path):
+            return collection
 
 
 def list_missing_derivatives(count=0):
