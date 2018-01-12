@@ -9,6 +9,7 @@ basedir = "/data/web_data/static"
 hostname = "https://cc.lib.ou.edu"
 s3_derivative_stub="derivative-bags"
 #imagemagick needs to be installed within the docker container
+#exiftool needs to be installed within container to export metadata
 
 
 def _formatextension(imageformat):
@@ -60,6 +61,12 @@ def _processimage(inpath, outpath, outformat="TIFF", filter="ANTIALIAS", scale=N
         image.thumbnail(size, imagefilter)
 
     image.save(outpath, outformat)
+
+
+def export_metadata(filepath):
+    """ exports json formatted metadata from file to [filename].json  """
+    # TODO: test filepath before sending to call - prevent additional flags from being inserted
+    check_call(("exiftool", "-j", filepath, '-w', 'json'))
 
 
 @task()
@@ -135,10 +142,11 @@ def derivative_generation(bags,s3_bucket='ul-bagit',s3_source='source',s3_destin
                 inpath="{0}/{1}".format(src_input,filename.split('/')[-1])
                 s3.meta.client.download_file(bucket.name, filename, inpath)
                 outpath="{0}/{1}.{2}".format(output,filename.split('/')[-1].split('.')[0].lower(),_formatextension(outformat))
-                #process image
+                #process image and extract metadata
                 _processimage(inpath=inpath,outpath=outpath,outformat=outformat,filter=filter,scale=scale,crop=crop)
+                export_metadata(inpath)
                 os.remove(inpath) # remove src image after generating derivative
-                if upload_s3:
+                if upload_s3:  # TODO: check for removal, if not removing update to upload exported metadata
                     #upload derivative to s3
                     fname=filename.split('/')[-1].split('.')[0].lower()
                     s3_key = "{0}/{1}/{2}/{3}.{4}".format(s3_destination,bag,formatparams,fname,_formatextension(outformat))
