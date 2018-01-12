@@ -1,6 +1,7 @@
 from celery.task import task
 from yaml import load as yaml_load
 from botocore.errorfactory import ClientError
+import os
 import boto3
 import logging
 import requests
@@ -45,6 +46,22 @@ def get_mmsid_from_s3(bagname):
     if re.match("^[0-9]+$", mmsid):  # check that we have an mmsid like value
         return mmsid
     return None
+
+
+def s3_object_file_size(s3_key):
+    """ get size of object in bytes  """
+    s3 = boto3.client('s3')
+    try:
+        response = s3.head_object(Bucket='ul-bagit', Key=s3_key)
+        return response['ContentLength']
+    except ClientError:
+        return None
+
+
+def available_disk_space(path):
+    """ get available disk space in bytes """
+    stats = os.statvfs(path)
+    return stats.f_bsize * stats.f_bavai
 
 
 def get_collection(token, mmsid):
