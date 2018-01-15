@@ -1,6 +1,7 @@
 from yaml import load as yaml_load
 from botocore.errorfactory import ClientError
 import os
+import re
 import boto3
 import requests
 import celeryconfig
