@@ -84,9 +84,9 @@ def get_collection(auth_token, mmsid):
     xml = etree.fromstring(response.content.strip())
     # TODO: Add missing collections' namespace:PID
     collections = {
-        #'bizzell_bible': '//holdings/holding/library[text()="BIZZELL"] and //holdings/holding/location[text()="BIZZ_BIBLE"]',
+        'oku:bzb': '//holdings/holding/library[text()="BIZZELL"] and //holdings/holding/location[text()="BIZZ_BIBLE"]',
         'oku:bbh': '//holdings/holding/library[text()="BIZZELL"] and //holdings/holding/location[text()="BASS_COLL"]',
-        #'west_hist': '//holdings/holding/library[text()="WESTRNHIST"]',
+        'oku:whc': '//holdings/holding/library[text()="WESTRNHIST"]',
         'oku:hos': '//holdings/holding/library[text()="HISTSCI"]',
     }
     for collection, path in collections.items():
